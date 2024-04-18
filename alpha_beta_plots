@@ -1,0 +1,152 @@
+library(dplyr)
+library(ggplot2)
+
+# List of diversity metrics
+diversity_metrics <- c("faith_pd", "pielou_evenness", "observed_features", "shannon_entropy")
+
+# Iterate over each diversity metric
+for (metric in diversity_metrics) {
+  # Summarize the metric by grouping it by 'isolation_source'
+  metric_summary <- meta %>%
+    group_by(isolation_source) %>%
+    summarise(mean_metric = mean(!!sym(metric)),
+              sd_metric = sd(!!sym(metric)),
+              n_metric = n(),
+              se_metric = sd(!!sym(metric)) / sqrt(n()))
+  
+  # Create the plot
+  plot_title <- switch(
+    metric,
+    "faith_pd" = "Faith's Phylogenetic Diversity ± s.e.",
+    "pielou_evenness" = "Pielou's Evenness ± s.e.",
+    "observed_features" = "Observed Features ± s.e.",
+    "shannon_entropy" = "Shannon Entropy ± s.e."
+  )
+  
+  plot_filename <- switch(
+    metric,
+    "faith_pd" = "faith_pd_status.png",
+    "pielou_evenness" = "pielou_evenness_status.png",
+    "observed_features" = "observed_features_status.png",
+    "shannon_entropy" = "shannon_entropy_status.png"
+  )
+  
+  metric_plot <- ggplot(metric_summary, aes(isolation_source, mean_metric, fill = isolation_source)) + 
+    geom_col() + 
+    geom_errorbar(aes(ymin = mean_metric - se_metric, ymax = mean_metric + se_metric), width = 0.2) + 
+    theme(axis.text.x = element_text(angle = 90, hjust = 1, vjust = 0.5)) +
+    theme(legend.title = element_blank()) +
+    labs(y = plot_title, x = "")
+  
+  # Save the plot as an image
+  ggsave(paste("output/", plot_filename, sep = ""), metric_plot, height = 2.5, width = 3)
+}
+
+#### BASED ON GROUP 
+library(dplyr)
+library(ggplot2)
+
+# List of diversity metrics
+diversity_metrics <- c("faith_pd", "pielou_evenness", "observed_features", "shannon_entropy")
+
+# Iterate over each diversity metric
+for (metric in diversity_metrics) {
+  # Summarize the metric by grouping it by 'group'
+  metric_summary <- meta %>%
+    group_by(group) %>%
+    summarise(mean_metric = mean(!!sym(metric)),
+              sd_metric = sd(!!sym(metric)),
+              n_metric = n(),
+              se_metric = sd(!!sym(metric)) / sqrt(n()))
+  
+  # Create the plot
+  plot_title <- switch(
+    metric,
+    "faith_pd" = "Faith's Phylogenetic Diversity ± s.e.",
+    "pielou_evenness" = "Pielou's Evenness ± s.e.",
+    "observed_features" = "Observed Features ± s.e.",
+    "shannon_entropy" = "Shannon Entropy ± s.e."
+  )
+  
+  plot_filename <- switch(
+    metric,
+    "faith_pd" = "faith_pd_status_group.png",
+    "pielou_evenness" = "pielou_evenness_status_group.png",
+    "observed_features" = "observed_features_status_group.png",
+    "shannon_entropy" = "shannon_entropy_status_group.png"
+  )
+  
+  metric_plot <- ggplot(metric_summary, aes(group, mean_metric, fill = group)) + 
+    geom_col() + 
+    geom_errorbar(aes(ymin = mean_metric - se_metric, ymax = mean_metric + se_metric), width = 0.2) + 
+    theme(axis.text.x = element_text(angle = 90, hjust = 1, vjust = 0.5)) +
+    theme(legend.title = element_blank()) +
+    labs(y = plot_title, x = "")
+  
+  # Save the plot as an image
+  ggsave(paste("output/", plot_filename, sep = ""), metric_plot, height = 2.5, width = 3)
+}
+
+
+## BETA DIVERSITY
+
+# List of beta diversity results files with their full paths
+beta_diversity_results <- c(
+  "/Users/esculley/Desktop/alpha/core-metrics-results/weighted_unifrac_pcoa_results.qza",
+  "/Users/esculley/Desktop/alpha/core-metrics-results/unweighted_unifrac_pcoa_results.qza",
+  "/Users/esculley/Desktop/alpha/core-metrics-results/bray_curtis_pcoa_results.qza",
+  "/Users/esculley/Desktop/alpha/core-metrics-results/jaccard_pcoa_results.qza"
+)
+
+# Iterate over each beta diversity result file
+for (result_file in beta_diversity_results) {
+  # Read the PCoA results
+  pcoa_results <- read_qza(result_file)
+  
+  # Extract PCoA vectors and join with metadata
+  pcoa_meta <- pcoa_results$data$Vectors %>%
+    select(SampleID, PC1, PC2) %>%
+    inner_join(meta, by = "SampleID")
+  
+  # Group the data by 'group' variable
+  pcoa_grouped <- pcoa_meta %>%
+    group_by(group) %>%
+    summarise_at(vars(PC1, PC2), mean)
+  
+  # Create plot title
+  plot_title <- switch(
+    result_file,
+    "/Users/esculley/Desktop/alpha/core-metrics-results/weighted_unifrac_pcoa_results.qza" = "Weighted UniFrac",
+    "/Users/esculley/Desktop/alpha/core-metrics-results/unweighted_unifrac_pcoa_results.qza" = "Unweighted UniFrac",
+    "/Users/esculley/Desktop/alpha/core-metrics-results/bray_curtis_pcoa_results.qza" = "Bray-Curtis",
+    "/Users/esculley/Desktop/alpha/core-metrics-results/jaccard_pcoa_results.qza" = "Jaccard"
+  )
+  
+  # Define colors for the groups in your data
+  body_colors <- c("red", "blue", "green", "orange")
+  
+  # Now you can proceed with your plotting code
+  
+  # Create the plot
+  p <- ggplot(pcoa_meta, aes(x = PC1, y = PC2, color = group)) +
+    geom_point() +
+    geom_point(data = pcoa_grouped, size = 3) +
+    theme_q2r() +
+    stat_ellipse(level = 0.95, type = "t") +
+    xlab(paste0("PC1 (", round(100 * pcoa_results$data$ProportionExplained[1], digits = 2), "%)")) +
+    ylab(paste0("PC2 (", round(100 * pcoa_results$data$ProportionExplained[2], digits = 2), "%)")) +
+    scale_color_manual(values = body_colors, name = "Group")
+  
+  # Save the plot as a PDF
+  ggsave(paste0("output/", basename(result_file), "_ellipse_group.pdf"), plot = p, height = 3, width = 4.5, device = "pdf")
+}
+
+
+
+
+
+
+
+
+
+
