@@ -1,0 +1,115 @@
+## Weighted UNIFRAC
+Wuni_PCoA<-read_qza("weighted_unifrac_pcoa_results.qza")
+
+Wuni_meta <- Wuni_PCoA$data$Vectors %>%
+  select(SampleID, PC1, PC2) %>%
+  inner_join(metadata, by = c("SampleID" = "SampleID"))
+
+centroids <- aggregate(cbind(PC1,PC2)~get(my_column),Wuni_meta,mean)
+
+ggplot(Wuni_meta, aes(x=PC1, y=PC2, color=get(my_column))) +
+  geom_point() + #alpha controls transparency and helps when points are overlapping
+  #geom_point(data=centroids, size = 3) +
+  theme_q2r() +
+  stat_ellipse(level = 0.95, type = "t") +
+  xlab(paste0("PC1 (", round(100*Wuni_PCoA$data$ProportionExplained[1], digits = 2), "%)")) +
+  ylab(paste0("PC2 (", round(100*Wuni_PCoA$data$ProportionExplained[2], digits = 2), "%)")) +
+  scale_color_manual(values=body_colors, name = "Body Site")
+ggsave(paste0("output/Wuni-ellipse_", my_column,".pdf"), height=3, width=4.5, device="pdf") # save a PDF 3 inches by 4 inches
+
+ggplot(Wuni_meta, aes(x=PC1, y=PC2, color=get(my_column))) +
+  geom_point(aes(shape= subject), size = 3) + #alpha controls transparency and helps when points are overlapping
+  #geom_point(data=centroids, size = 3) +
+  theme_q2r() +
+  stat_ellipse(level = 0.95, type = "t") +
+  xlab(paste0("PC1 (", round(100*Wuni_PCoA$data$ProportionExplained[1], digits = 2), "%)")) +
+  ylab(paste0("PC2 (", round(100*Wuni_PCoA$data$ProportionExplained[2], digits = 2), "%)")) +
+  scale_color_manual(values=body_colors, name = "Body Site")
+ggsave(paste0("output/Wuni-ellipse_", my_column,"-subject.pdf"), height=3, width=4.5, device="pdf") # save a PDF 3 inches by 4 inches
+
+bc_dist_mat<-read_qza("core-metrics-results/bray_curtis_distance_matrix.qza")
+bc_dm <- as.matrix(bc_dist_mat$data) 
+rownames(bc_dm) == metadata$SampleID ## all these values need to be "TRUE"
+metadata_sub <- metadata[match(rownames(bc_dm),metadata$SampleID),]
+rownames(bc_dm) == metadata_sub$SampleID ## all these values need to be "TRUE"
+
+
+## UNWEIGHTED UNIFRAC
+
+UWuni_PCoA<-read_qza("core-metrics-results/unweighted_unifrac_pcoa_results.qza")
+
+UWuni_meta <- UWuni_PCoA$data$Vectors %>%
+  select(SampleID, PC1, PC2) %>%
+  inner_join(metadata, by = c("SampleID" = "SampleID"))
+
+centroids <- aggregate(cbind(PC1,PC2)~get(my_column),UWuni_meta,mean)
+colnames(centroids)[1] <- "body.site"
+
+ggplot(UWuni_meta, aes(x=PC1, y=PC2, color=get(my_column))) +
+  geom_point() + #alpha controls transparency and helps when points are overlapping
+  geom_point(data=centroids, size = 3) +
+  theme_q2r() +
+  stat_ellipse(level = 0.95, type = "t") +
+  xlab(paste0("PC1 (", round(100*UWuni_PCoA$data$ProportionExplained[1], digits = 2), "%)")) +
+  ylab(paste0("PC2 (", round(100*UWuni_PCoA$data$ProportionExplained[2], digits = 2), "%)")) +
+  scale_color_manual(values=body_colors, name = "Body Site")
+ggsave(paste0("output/UWuni-ellipse_", my_column,".pdf"), height=3, width=4.5, device="pdf") # save a PDF 3 inches by 4 inches
+
+ggplot(UWuni_meta, aes(x=PC1, y=PC2, color=get(my_column))) +
+  geom_point(aes(shape= subject), size = 3) + #alpha controls transparency and helps when points are overlapping
+  geom_point(data=centroids, size = 3) +
+  theme_q2r() +
+  stat_ellipse(level = 0.95, type = "t") +
+  xlab(paste0("PC1 (", round(100*UWuni_PCoA$data$ProportionExplained[1], digits = 2), "%)")) +
+  ylab(paste0("PC2 (", round(100*UWuni_PCoA$data$ProportionExplained[2], digits = 2), "%)")) +
+  scale_color_manual(values=body_colors, name = "Body Site")
+ggsave(paste0("output/UWuni-ellipse_", my_column,"-subject.pdf"), height=3, width=4.5, device="pdf") # save a PDF 3 inches by 4 inches
+
+bc_dist_mat<-read_qza("core-metrics-results/bray_curtis_distance_matrix.qza")
+bc_dm <- as.matrix(bc_dist_mat$data) 
+rownames(bc_dm) == metadata$SampleID ## all these values need to be "TRUE"
+metadata_sub <- metadata[match(rownames(bc_dm),metadata$SampleID),]
+rownames(bc_dm) == metadata_sub$SampleID ## all these values need to be "TRUE"
+
+
+# JACCARD
+Jaccard_PCoA <- read_qza("core-metrics-results/jaccard_pcoa_results.qza")
+
+Jaccard_meta <- Jaccard_PCoA$data$Vectors %>%
+  select(SampleID, PC1, PC2) %>%
+  inner_join(metadata, by = c("SampleID" = "SampleID"))
+
+Jaccard_centroids <- aggregate(cbind(PC1, PC2) ~ get(my_column), Jaccard_meta, mean)
+colnames(Jaccard_centroids)[1] <- "body.site"
+
+Jaccard_centroids <- aggregate(cbind(PC1, PC2) ~ body.site, Jaccard_meta, mean)
+
+ggplot(Jaccard_meta, aes(x = PC1, y = PC2, color = body.site)) +
+  geom_point() +
+  geom_point(data = Jaccard_centroids, size = 3) +
+  theme_q2r() +
+  stat_ellipse(level = 0.95, type = "t") +
+  xlab(paste0("PC1 (", round(100 * Jaccard_PCoA$data$ProportionExplained[1], digits = 2), "%)")) +
+  ylab(paste0("PC2 (", round(100 * Jaccard_PCoA$data$ProportionExplained[2], digits = 2), "%)")) +
+  scale_color_manual(values = body_colors, name = "Body Site")
+
+# BRAY-CURTIS
+BrayCurtis_PCoA <- read_qza("core-metrics-results/bray_curtis_pcoa_results.qza")
+
+BrayCurtis_meta <- BrayCurtis_PCoA$data$Vectors %>%
+  select(SampleID, PC1, PC2) %>%
+  inner_join(metadata, by = c("SampleID" = "SampleID"))
+
+BrayCurtis_centroids <- aggregate(cbind(PC1, PC2) ~ body.site, BrayCurtis_meta, mean)
+
+ggplot(BrayCurtis_meta, aes(x = PC1, y = PC2, color = body.site)) +
+  geom_point() +
+  geom_point(data = BrayCurtis_centroids, size = 3) +
+  theme_q2r() +
+  stat_ellipse(level = 0.95, type = "t") +
+  xlab(paste0("PC1 (", round(100 * BrayCurtis_PCoA$data$ProportionExplained[1], digits = 2), "%)")) +
+  ylab(paste0("PC2 (", round(100 * BrayCurtis_PCoA$data$ProportionExplained[2], digits = 2), "%)")) +
+  scale_color_manual(values = body_colors, name = "Body Site")
+
+ggsave(paste0("output/BrayCurtis-ellipse_", my_column, ".pdf"), height = 3, width = 4.5, device = "pdf")
+
