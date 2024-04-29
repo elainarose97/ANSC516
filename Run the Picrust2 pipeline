@@ -1,0 +1,35 @@
+#!/bin/sh -l
+
+#SBATCH --nodes=1                    ##number of requested nodes (a node is a group of CPUs)
+#SBATCH -n 20                        ##number of requested CPUs
+#SBATCH --time=04:00:00              ##time requested
+#SBATCH --job-name picrust_group      ##name of job
+#SBATCH -A microbiome                ##name of the queue you are using. Could be scholar or microbiome if you are $
+
+#########################################################################
+
+echo "Start time"
+date +"%d %B %Y %H:%M:%S"
+pwd
+
+module use /depot/microbiome/apps/modulefiles
+module load conda-env/qiime2-2021.11-py3.8.5
+
+# Activate the QIIME 2 conda environment
+conda activate qiime2-2021.11
+
+# Validate the QIIME 2 artifacts
+qiime tools validate table.qza
+qiime tools validate rep-seqs.qza
+
+# Run the Picrust2 pipeline
+qiime picrust2 full-pipeline \
+   --i-table table.qza \
+   --i-seq rep-seqs.qza \
+   --output-dir q2-picrust2_output \
+   --p-placement-tool sepp \
+   --p-threads 4 \
+   --p-hsp-method pic \
+   --p-max-nsti 2 \
+   --verbose
+
